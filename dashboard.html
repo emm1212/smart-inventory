@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم - تخزين ذكي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            padding: 24px;
+        }
+
+        /* الحاوية الرئيسية */
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* الهيدر */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .dashboard-header h1 {
+            font-size: 28px;
+            color: #e67e22;
+        }
+
+        .dashboard-header h1 i {
+            margin-left: 10px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .action-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 10px 20px;
+            border-radius: 40px;
+            color: #f1f5f9;
+            cursor: pointer;
+            font-family: 'Cairo', sans-serif;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            background: #e67e22;
+            border-color: #e67e22;
+        }
+
+        /* بطاقات الإحصائيات */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: #1e293b;
+            padding: 24px;
+            border-radius: 20px;
+            border: 1px solid #334155;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: #e67e22;
+        }
+
+        .stat-card .icon {
+            font-size: 40px;
+            color: #e67e22;
+            margin-bottom: 16px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .stat-card .label {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .stat-card .trend {
+            margin-top: 12px;
+            font-size: 13px;
+        }
+
+        .trend.up { color: #22c55e; }
+        .trend.down { color: #ef4444; }
+
+        /* شبكة الرسوم البيانية */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .chart-card {
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid #334155;
+        }
+
+        .chart-card h3 {
+            margin-bottom: 20px;
+            color: #e67e22;
+            font-size: 18px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+        }
+
+        /* الجدول */
+        .table-card {
+            background: #1e293b;
+            border-radius: 20px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 20px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .table-header h3 {
+            color: #e67e22;
+        }
+
+        .filter-input {
+            background: #0f172a;
+            border: 1px solid #334155;
+            padding: 8px 16px;
+            border-radius: 40px;
+            color: white;
+            font-family: 'Cairo', sans-serif;
+            width: 200px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: right;
+            border-bottom: 1px solid #334155;
+        }
+
+        th {
+            background: #0f172a;
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: rgba(51, 65, 85, 0.3);
+        }
+
+        /* تذييل */
+        .dashboard-footer {
+            margin-top: 32px;
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        /* استجابة */
+        @media (max-width: 768px) {
+            body { padding: 16px; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .table-header { flex-direction: column; align-items: stretch; }
+            .filter-input { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- الهيدر -->
+        <div class="dashboard-header">
+            <h1><i class="fas fa-chart-line"></i> لوحة التحكم</h1>
+            <div class="header-actions">
+                <button class="action-btn" id="filterBtn"><i class="fas fa-filter"></i> Filter now</button>
+                <button class="action-btn" id="fixBtn"><i class="fas fa-wrench"></i> Fix for me</button>
+                <button class="action-btn" id="customizeBtn"><i class="fas fa-sliders-h"></i> Customize</button>
+                <button class="action-btn" id="exportBtn"><i class="fas fa-download"></i> Export</button>
+            </div>
+        </div>
+
+        <!-- بطاقات الإحصائيات -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-chart-simple"></i></div>
+                <div class="value" id="totalSales">$0</div>
+                <div class="label">إجمالي المبيعات</div>
+                <div class="trend up"><i class="fas fa-arrow-up"></i> +12.5% عن الشهر الماضي</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-dollar-sign"></i></div>
+                <div class="value" id="totalRevenue">$0</div>
+                <div class="label">إجمالي الإيرادات</div>
+                <div class="trend up"><i class="fas fa-arrow-up"></i> +8.2% عن الشهر الماضي</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-users"></i></div>
+                <div class="value" id="totalCustomers">0</div>
+                <div class="label">العملاء</div>
+                <div class="trend up"><i class="fas fa-arrow-up"></i> +5.3% عن الشهر الماضي</div>
+            </div>
+            <div class="stat-card">
+                <div class="icon"><i class="fas fa-box"></i></div>
+                <div class="value" id="totalOrders">0</div>
+                <div class="label">الطلبات</div>
+                <div class="trend down"><i class="fas fa-arrow-down"></i> -2.1% عن الشهر الماضي</div>
+            </div>
+        </div>
+
+        <!-- الرسوم البيانية -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-pie"></i> توزيع المبيعات</h3>
+                <div class="chart-container">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card">
+                <h3><i class="fas fa-chart-line"></i> المبيعات والإيرادات</h3>
+                <div class="chart-container">
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- جدول البيانات -->
+        <div class="table-card">
+            <div class="table-header">
+                <h3><i class="fas fa-table"></i> البيانات الشهرية</h3>
+                <input type="text" class="filter-input" id="tableFilter" placeholder="بحث...">
+            </div>
+            <div style="overflow-x: auto;">
+                <table id="dataTable">
+                    <thead>
+                        <tr><th>الشهر</th><th>المبيعات (مليون)</th><th>الإيرادات (مليون)</th><th>النمو</th></tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="dashboard-footer">
+            <p>📊 آخر تحديث: <span id="lastUpdate"></span> | بيانات تفاعلية محدثة لحظياً</p>
+        </div>
+    </div>
+
+    <script>
+        // ===================== البيانات =====================
+        const monthlyData = [
+            { month: 'يناير 2023', sales: 0.00, revenue: 0.00, growth: '0%' },
+            { month: 'فبراير 2023', sales: 0.50, revenue: 0.45, growth: '+50%' },
+            { month: 'مارس 2023', sales: 1.00, revenue: 0.90, growth: '+100%' },
+            { month: 'أبريل 2023', sales: 1.50, revenue: 1.35, growth: '+50%' },
+            { month: 'مايو 2023', sales: 2.00, revenue: 1.80, growth: '+33%' },
+            { month: 'يونيو 2023', sales: 2.50, revenue: 2.25, growth: '+25%' },
+            { month: 'يوليو 2023', sales: 3.00, revenue: 2.70, growth: '+20%' },
+            { month: 'أغسطس 2023', sales: 3.50, revenue: 3.15, growth: '+17%' },
+            { month: 'سبتمبر 2023', sales: 4.00, revenue: 3.60, growth: '+14%' },
+            { month: 'أكتوبر 2023', sales: 4.50, revenue: 4.05, growth: '+12.5%' },
+            { month: 'نوفمبر 2023', sales: 5.00, revenue: 4.50, growth: '+11%' },
+            { month: 'ديسمبر 2023', sales: 5.50, revenue: 4.95, growth: '+10%' }
+        ];
+
+        // حساب الإحصائيات
+        const totalSales = monthlyData.reduce((sum, d) => sum + d.sales, 0);
+        const totalRevenue = monthlyData.reduce((sum, d) => sum + d.revenue, 0);
+        const totalCustomers = 2847;
+        const totalOrders = 1243;
+
+        // تحديث البطاقات
+        document.getElementById('totalSales').textContent = '$' + totalSales.toFixed(1) + 'M';
+        document.getElementById('totalRevenue').textContent = '$' + totalRevenue.toFixed(1) + 'M';
+        document.getElementById('totalCustomers').textContent = totalCustomers.toLocaleString();
+        document.getElementById('totalOrders').textContent = totalOrders.toLocaleString();
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleDateString('ar-SA');
+
+        // ===================== الرسم البياني الدائري (Pie Chart) =====================
+        const pieCtx = document.getElementById('pieChart').getContext('2d');
+        new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+                labels: ['المبيعات', 'الإيرادات'],
+                datasets: [{
+                    data: [totalSales, totalRevenue],
+                    backgroundColor: ['#e67e22', '#22c55e'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: '#f1f5f9', font: { family: 'Cairo' } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': $' + context.raw.toFixed(1) + 'M';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // ===================== الرسم البياني الخطي (Line Chart) =====================
+        const lineCtx = document.getElementById('lineChart').getContext('2d');
+        new Chart(lineCtx, {
+            type: 'line',
+            data: {
+                labels: monthlyData.map(d => d.month),
+                datasets: [
+                    {
+                        label: 'المبيعات (مليون $)',
+                        data: monthlyData.map(d => d.sales),
+                        borderColor: '#e67e22',
+                        backgroundColor: 'rgba(230, 126, 34, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#e67e22',
+                        pointBorderColor: '#fff',
+                        pointRadius: 4
+                    },
+                    {
+                        label: 'الإيرادات (مليون $)',
+                        data: monthlyData.map(d => d.revenue),
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#22c55e',
+                        pointBorderColor: '#fff',
+                        pointRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { color: '#f1f5f9', font: { family: 'Cairo' } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': $' + context.raw.toFixed(2) + 'M';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        grid: { color: '#334155' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', rotation: 45 }
+                    }
+                }
+            }
+        });
+
+        // ===================== عرض الجدول =====================
+        function renderTable(filter = '') {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            const filteredData = monthlyData.filter(row => 
+                row.month.toLowerCase().includes(filter.toLowerCase())
+            );
+            
+            filteredData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.month}</td>
+                    <td>$${row.sales.toFixed(2)}M</td>
+                    <td>$${row.revenue.toFixed(2)}M</td>
+                    <td class="trend ${row.growth.startsWith('+') ? 'up' : 'down'}">${row.growth}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        renderTable();
+
+        // فلتر الجدول
+        document.getElementById('tableFilter').addEventListener('input', (e) => {
+            renderTable(e.target.value);
+        });
+
+        // ===================== أزرار التحكم =====================
+        document.getElementById('filterBtn').addEventListener('click', () => {
+            alert('🔍 فتح لوحة التصفية المتقدمة');
+        });
+        
+        document.getElementById('fixBtn').addEventListener('click', () => {
+            alert('🔧 تم إصلاح المشاكل تلقائياً');
+        });
+        
+        document.getElementById('customizeBtn').addEventListener('click', () => {
+            alert('🎨 تخصيص لوحة التحكم - اختر الأعمدة والرسوم البيانية');
+        });
+        
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            // تصدير البيانات كـ CSV
+            let csv = 'الشهر,المبيعات (مليون $),الإيرادات (مليون $)\n';
+            monthlyData.forEach(row => {
+                csv += `${row.month},${row.sales},${row.revenue}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'dashboard_data.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+            alert('📥 تم تصدير البيانات كملف CSV');
+        });
+    </script>
+</body>
+</html>
